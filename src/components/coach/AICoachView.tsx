@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMobility } from '../../context/MobilityContext';
 import { CoverLetterDoc, MockInterviewTurn } from '../../types';
 import {
@@ -55,12 +55,25 @@ export const AICoachView: React.FC = () => {
   const [interviewCompany, setInterviewCompany] = useState('현대자동차');
   const [interviewRole, setInterviewRole] = useState('생산기술');
   const [currentQuestion, setCurrentQuestion] = useState(
-    '양산 라인에서 설계 도면과 실제 가공품 간의 공차 불일치로 조립 불량이 발생한다면 생산기술 엔지니어로서 어떤 절차로 조치하시겠습니까?'
+    '양산 라인에서 설계 도면과 실제 가공품 간의 공차 불일치로 조립 불량이 발생한다면 엔지니어로서 어떤 절차로 조치하시겠습니까?'
   );
   const [userAnswer, setUserAnswer] = useState('');
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [isGeneratingQ, setIsGeneratingQ] = useState(false);
   const [latestEval, setLatestEval] = useState<any>(null);
+
+  // Sync with profile changes
+  useEffect(() => {
+    if (profile.coverLetter && !draftText) {
+      setDraftText(profile.coverLetter);
+    }
+    if (profile.targetRoles && profile.targetRoles.length > 0) {
+      const preferred = profile.targetRoles[0];
+      setTargetRole(preferred);
+      setInterviewRole(preferred);
+      setCurrentQuestion(`${preferred} 직무 현장에서 예상치 못한 기술적 트러블이나 성능 편차가 발생했을 때, 엔지니어로서 어떠한 절차와 데이터로 원인을 규명하시겠습니까?`);
+    }
+  }, [profile]);
 
   // --- Job Tailored Guide State ---
   const [selectedJobId, setSelectedJobId] = useState<string>(jobPostings[0]?.id || '');
@@ -544,10 +557,18 @@ export const AICoachView: React.FC = () => {
               <div className="pt-2 flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setUserAnswer('네, 생산기술 엔지니어로서 조립 공차 불일치 발생 시 임시 조치와 근본 원인 해결로 나누어 대응하겠습니다. 먼저 측정 데이터를 기반으로 0.05mm 유격의 원인을 추적하고, 긴급 방열 지그 보정과 볼트 체결 시퀀스 표준화를 통해 공차를 ±0.012mm로 즉시 안정화하겠습니다.')}
+                  onClick={() => {
+                    if (/sw|소프트웨어|자율주행|it|컴퓨터/i.test(interviewRole)) {
+                      setUserAnswer('자율주행 시스템 개발 과정에서 센서 데이터 처리 지연이 발생했을 때, 먼저 로그 프로파일링으로 병목 지점을 특정하고 멀티스레드 비동기 처리 및 알고리즘 경량화를 통해 지연 시간을 28ms로 30% 단축시켰습니다.');
+                    } else if (/배터리|화학|신소재/i.test(interviewRole)) {
+                      setUserAnswer('배터리 극판 공정에서 두께 편차가 발생할 경우, 롤투롤 서보 갭 센서와 유압 캘린더링 압력 데이터를 실시간 분석하여 공차를 ±2㎛ 이내로 안정화하겠습니다.');
+                    } else {
+                      setUserAnswer('생산기술 엔지니어로서 조립 공차 불일치 발생 시 임시 격리 조치와 근본 원인 분석으로 나누어 대응하겠습니다. 먼저 3차원 측정 데이터를 분석하여 0.05mm 유격의 원인을 추적하고, 지그 보정과 볼트 체결 시퀀스 표준화를 통해 공차를 ±0.012mm로 안정화하겠습니다.');
+                    }
+                  }}
                   className="text-xs text-blue-600 font-bold hover:underline cursor-pointer"
                 >
-                  예시 답변 채우기
+                  💡 직무 맞춤 예시 답변 채우기
                 </button>
 
                 <button

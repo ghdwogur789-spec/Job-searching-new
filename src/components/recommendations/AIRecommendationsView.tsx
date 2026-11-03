@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMobility } from '../../context/MobilityContext';
 import { JobPosting, RecommendedRole } from '../../types';
 import {
@@ -128,21 +128,41 @@ export const AIRecommendationsView: React.FC = () => {
   const [targetLocationsInput, setTargetLocationsInput] = useState(profile.targetLocations.join(', '));
   const [isSavedNotice, setIsSavedNotice] = useState(false);
 
+  // Keep local form fields synchronized whenever the profile context changes (sample profile loaded, reset, etc.)
+  useEffect(() => {
+    setEditMajor(profile.major || '');
+    setEditUniversity(profile.university || '');
+    setEditGpa(profile.gpa || '');
+    setEditStatus(profile.educationStatus || '재학');
+    setSkillsInput((profile.skills || []).join(', '));
+    setCertsInput((profile.certifications || []).join(', '));
+    setCoverLetterInput(profile.coverLetter || '');
+    setResumeTextInput(profile.resumeText || '');
+    setTargetIndustriesInput((profile.targetIndustries || []).join(', '));
+    setTargetRolesInput((profile.targetRoles || []).join(', '));
+    setTargetLocationsInput((profile.targetLocations || []).join(', '));
+  }, [profile]);
+
+  // Construct current profile object from form state
+  const getFormProfile = () => ({
+    ...profile,
+    major: editMajor.trim(),
+    university: editUniversity.trim(),
+    gpa: editGpa.trim(),
+    educationStatus: editStatus as any,
+    skills: skillsInput.split(',').map(s => s.trim()).filter(Boolean),
+    certifications: certsInput.split(',').map(s => s.trim()).filter(Boolean),
+    coverLetter: coverLetterInput,
+    resumeText: resumeTextInput,
+    targetIndustries: targetIndustriesInput.split(',').map(s => s.trim()).filter(Boolean),
+    targetRoles: targetRolesInput.split(',').map(s => s.trim()).filter(Boolean),
+    targetLocations: targetLocationsInput.split(',').map(s => s.trim()).filter(Boolean),
+  });
+
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfile({
-      major: editMajor,
-      university: editUniversity,
-      gpa: editGpa,
-      educationStatus: editStatus as any,
-      skills: skillsInput.split(',').map(s => s.trim()).filter(Boolean),
-      certifications: certsInput.split(',').map(s => s.trim()).filter(Boolean),
-      coverLetter: coverLetterInput,
-      resumeText: resumeTextInput,
-      targetIndustries: targetIndustriesInput.split(',').map(s => s.trim()).filter(Boolean),
-      targetRoles: targetRolesInput.split(',').map(s => s.trim()).filter(Boolean),
-      targetLocations: targetLocationsInput.split(',').map(s => s.trim()).filter(Boolean),
-    });
+    const updated = getFormProfile();
+    updateProfile(updated);
     setIsSavedNotice(true);
     setTimeout(() => setIsSavedNotice(false), 2500);
   };
@@ -166,8 +186,14 @@ export const AIRecommendationsView: React.FC = () => {
     reader.readAsText(file);
   };
 
+  // Crucial: immediately save the user's latest inputs and pass the fresh profile to the AI analysis
   const handleTriggerAnalysis = async () => {
-    const result = await runAICompetencyAnalysis();
+    const updated = getFormProfile();
+    updateProfile(updated);
+    setIsSavedNotice(true);
+    setTimeout(() => setIsSavedNotice(false), 2000);
+
+    const result = await runAICompetencyAnalysis(updated);
     if (result) {
       setActiveTab('recommendations');
     }
@@ -274,24 +300,45 @@ export const AIRecommendationsView: React.FC = () => {
                 직접 텍스트를 입력하거나 자기소개서/이력서 파일을 업로드하면 AI가 분석에 반영합니다.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                loadSampleProfile();
-                setEditMajor(profile.major);
-                setEditUniversity(profile.university);
-                setEditGpa(profile.gpa);
-                setSkillsInput(profile.skills.join(', '));
-                setCertsInput(profile.certifications.join(', '));
-                setCoverLetterInput(profile.coverLetter);
-                setResumeTextInput(profile.resumeText);
-                alert('모빌리티 취준생 김모빌 예시 데이터가 입력 폼에 채워졌습니다.');
-              }}
-              className="text-xs text-blue-600 font-bold hover:underline cursor-pointer flex items-center gap-1"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              예시 데이터 채우기
-            </button>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-slate-400 font-medium mr-1">빠른 예시 채우기:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditMajor('기계공학');
+                  setSkillsInput('CATIA V5, SolidWorks, PLC, Python, AutoCAD, Minitab');
+                  setTargetRolesInput('생산기술, 공정설계, 품질보증');
+                  setCoverLetterInput('학부 캡스톤 프로젝트에서 차체 지그 및 브래킷 설계를 담당하여 3차원 측정 데이터 50회를 분석하고 조립 공차를 ±0.012mm로 안정화한 경험이 있습니다.');
+                }}
+                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold cursor-pointer transition-colors"
+              >
+                ⚙️ 기계·생산기술
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditMajor('컴퓨터공학과');
+                  setSkillsInput('C++, Python, ROS2, Linux, OpenCV, CAN통신, PyTorch, Git');
+                  setTargetRolesInput('자율주행 SW, SDV 차량용 임베디드, ADAS 제어');
+                  setCoverLetterInput('자율주행 인지 알고리즘 프로젝트에서 카메라-라이다 센서 퓨전 노드를 C++과 ROS2 환경에서 최적화하여 연산 지연시간을 28ms로 단축했습니다.');
+                }}
+                className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-semibold cursor-pointer transition-colors"
+              >
+                💻 SW·자율주행
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditMajor('화학공학/신소재');
+                  setSkillsInput('이차전지 전극 공정, 배터리 셀 특성 평가, 롤투롤 압연, 분체 분산, SEM');
+                  setTargetRolesInput('배터리 셀 제조기술, 배터리 공정기술, 품질 신뢰성');
+                  setCoverLetterInput('배터리 전극 슬러리 바인더 분산 공정 개선 과제에서 캘린더링 압력 파라미터를 최적화하여 전극 두께 편차를 3% 이내로 줄였습니다.');
+                }}
+                className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold cursor-pointer transition-colors"
+              >
+                🔋 배터리·소재
+              </button>
+            </div>
           </div>
 
           <form onSubmit={handleSaveProfile} className="space-y-6">

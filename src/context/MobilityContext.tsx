@@ -31,7 +31,7 @@ interface MobilityContextType {
   resetProfile: () => void;
   competencyAnalysis: AICompetencyAnalysis | null;
   isAnalyzingCompetency: boolean;
-  runAICompetencyAnalysis: () => Promise<AICompetencyAnalysis | null>;
+  runAICompetencyAnalysis: (overrideProfile?: UserProfile) => Promise<AICompetencyAnalysis | null>;
   jobPostings: JobPosting[];
   updateJobStatus: (jobId: string, status: JobStatus) => void;
   updateJobNotes: (jobId: string, notes: string) => void;
@@ -269,13 +269,17 @@ export const MobilityProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Run AI Competency Analysis via server endpoint
-  const runAICompetencyAnalysis = async (): Promise<AICompetencyAnalysis | null> => {
+  const runAICompetencyAnalysis = async (overrideProfile?: UserProfile): Promise<AICompetencyAnalysis | null> => {
     setIsAnalyzingCompetency(true);
+    const targetProfile = overrideProfile || profile;
+    if (overrideProfile) {
+      setProfile(overrideProfile);
+    }
     try {
       const res = await fetch('/api/gemini/analyze-competency', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profile }),
+        body: JSON.stringify({ profile: targetProfile }),
       });
       const json = await res.json();
       const analysis: AICompetencyAnalysis = {
